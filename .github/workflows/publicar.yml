@@ -1,9 +1,9 @@
-# Publica AgroDecide en GitHub Pages cada vez que se sube un cambio a la rama main.
+# Publicación alternativa con GitHub Actions (solo manual).
+# Hoy la página se publica desde la rama gh-pages (Settings → Pages → Deploy from a branch).
+# Para usar este método: Settings → Pages → Source: GitHub Actions, y volver a activar el disparo con push.
 name: Publicar en GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

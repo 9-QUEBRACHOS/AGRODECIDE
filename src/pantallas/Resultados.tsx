@@ -64,27 +64,34 @@ export default function Resultados() {
                 {resumen.hectareasSembradas > resumen.hectareas + 0.01 && <span className="block text-xs">{numero(resumen.hectareasSembradas)} ha sembradas</span>}
               </span>
             </div>
+            {/* Una sola tabla: las columnas "Por hectárea" y "Total" quedan alineadas en todas las filas */}
             <div className="mt-3 overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/15">
-              <div className="grid grid-cols-[1fr_auto_auto] text-[11px] font-bold uppercase tracking-wider text-white/60">
-                <span className="px-3 py-2" />
-                <span className="px-3 py-2 text-right">Por hectárea</span>
-                <span className="border-l border-white/15 px-3 py-2 text-right">Total</span>
-              </div>
-              {([
-                ['Costo', resumen.costoTotalUsd, false],
-                ['Ingreso', resumen.ingresoTotalUsd, false],
-                ['Margen neto', resumen.margenNetoUsd, true],
-              ] as const).map(([concepto, total, fuerte]) => (
-                <div key={concepto} className={cx('grid grid-cols-[1fr_auto_auto] items-baseline border-t border-white/15', fuerte && 'bg-white/10')}>
-                  <span className={cx('px-3 py-2.5 text-sm', fuerte ? 'font-bold text-trigo' : 'text-white/80')}>{concepto}</span>
-                  <span className={cx('num whitespace-nowrap px-3 py-2.5 text-right', fuerte ? 'text-lg font-extrabold' : 'font-semibold')}>
-                    {dinero(total === null || !resumen.hectareas ? null : total / resumen.hectareas, moneda, tipoCambio, 0)}
-                  </span>
-                  <span className={cx('num whitespace-nowrap border-l border-white/15 px-3 py-2.5 text-right', fuerte ? 'text-lg font-extrabold' : 'font-semibold')}>
-                    {dinero(total, moneda, tipoCambio, 0)}
-                  </span>
-                </div>
-              ))}
+              <table className="w-full">
+                <thead>
+                  <tr className="text-[11px] font-bold uppercase tracking-wider text-white/60">
+                    <th className="px-2.5 py-2" />
+                    <th className="px-2.5 py-2 text-right">Por ha</th>
+                    <th className="border-l border-white/15 px-2.5 py-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {([
+                    ['Costo', resumen.costoTotalUsd, false],
+                    ['Ingreso', resumen.ingresoTotalUsd, false],
+                    ['Margen neto', resumen.margenNetoUsd, true],
+                  ] as const).map(([concepto, total, fuerte]) => (
+                    <tr key={concepto} className={cx('border-t border-white/15', fuerte && 'bg-white/10')}>
+                      <td className={cx('px-2.5 py-2.5 text-sm leading-tight', fuerte ? 'font-bold text-trigo' : 'text-white/80')}>{concepto}</td>
+                      <td className={cx('num w-px whitespace-nowrap px-2.5 py-2.5 text-right text-[15px]', fuerte ? 'font-extrabold sm:text-lg' : 'font-semibold')}>
+                        {dinero(total === null || !resumen.hectareas ? null : total / resumen.hectareas, moneda, tipoCambio, 0)}
+                      </td>
+                      <td className={cx('num w-px whitespace-nowrap border-l border-white/15 px-2.5 py-2.5 text-right text-[15px]', fuerte ? 'font-extrabold sm:text-lg' : 'font-semibold')}>
+                        {dinero(total, moneda, tipoCambio, 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             {(hayProyectados || resumen.cultivosSinPrecio > 0) && (
               <p className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs text-white/85">

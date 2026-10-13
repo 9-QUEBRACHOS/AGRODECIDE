@@ -410,6 +410,10 @@ El costo de alimentación de un rodeo es la suma de sus suministros valuados a c
 - Stock.
 - Reservas, rodeos y suministros. Pantalla "Costo de alimentación" con valuación a costo vs mercado.
 - Comparativa entre lotes y cultivos (gráficos).
+- **Compras y stock de insumos (opcional, se activa por espacio).** Por defecto el precio se sigue
+  cargando en cada labor. Si el productor lo activa, carga cada compra (cantidad, precio, dólar del día),
+  la app descuenta el stock al aplicar y sugiere el precio promedio ponderado. Las labores ya cargadas
+  conservan su precio.
 
 ### Fase 3 — Avanzado
 - Parámetros impositivos y estimación de impuestos.

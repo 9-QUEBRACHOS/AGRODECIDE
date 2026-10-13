@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { db, nuevoId } from '../db/baseDatos';
 import { borrarCultivo, borrarLabor } from '../db/operaciones';
 import { useResultadosCampania } from '../db/consultas';
@@ -40,6 +40,9 @@ export default function CultivoDetalle() {
   const cosechas = useLiveQuery(async () => (await db.cosechas.where('cultivoEnLoteId').equals(id).toArray()).sort((a, b) => a.fecha.localeCompare(b.fecha)), [id]);
   const ventas = useLiveQuery(async () => (await db.ventas.where('cultivoEnLoteId').equals(id).toArray()).sort((a, b) => a.fecha.localeCompare(b.fecha)), [id]);
   const filas = useResultadosCampania(espacio.id, cultivo?.campaniaId);
+  const alquiler = useLiveQuery(
+    () => (cultivo ? db.alquileres.where({ loteId: cultivo.loteId, campaniaId: cultivo.campaniaId }).first() : undefined),
+    [cultivo?.loteId, cultivo?.campaniaId]);
   const resultado = filas?.find((f) => f.cultivo.id === id)?.resultado;
 
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -77,6 +80,24 @@ export default function CultivoDetalle() {
           )}
         </Tarjeta>
       )}
+
+      {/* ---------- Alquiler (siempre visible) ---------- */}
+      <Link to={`/lotes/${lote.id}`} className={cx('flex items-center gap-3 rounded-2xl px-4 py-3',
+        alquiler || lote.tenencia === 'propio' ? 'bg-white ring-1 ring-stone-200' : 'bg-trigo/15 ring-2 ring-trigo')}>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-campo-700">
+            {lote.tenencia === 'propio' ? 'Alquiler de referencia' : 'Alquiler del lote'}
+          </div>
+          <div className="text-sm text-stone-800">
+            {!alquiler
+              ? (lote.tenencia === 'propio' ? 'Sin cargar (opcional en campo propio)' : 'Falta cargarlo: el margen no es real')
+              : alquiler.modalidad === 'porcentaje_cosecha'
+                ? `${numero(alquiler.valor, 1)}% de la cosecha · ${d(resultado ? resultado.alquilerUsd / (cultivo.hectareas || 1) : null)}/ha`
+                : `${d(resultado ? resultado.alquilerUsd / (cultivo.hectareas || 1) : null)}/ha para este cultivo${(hermanos?.length ?? 0) > 1 ? ` (${numero(cultivo.porcentajeAlquiler)}% del lote)` : ''}`}
+          </div>
+        </div>
+        <span className="shrink-0 text-sm font-semibold text-campo-700">{alquiler ? 'Ver' : 'Cargar'} ›</span>
+      </Link>
 
       {/* ---------- Labores ---------- */}
       <TituloSeccion accion={<BotonAgregar onClick={() => setPanel({ tipo: 'labor' })}>Labor</BotonAgregar>}>

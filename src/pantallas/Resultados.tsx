@@ -5,7 +5,8 @@ import { useResultadosCampania } from '../db/consultas';
 import { resumir } from '../calculos/margen';
 import { useEspacio } from '../estado';
 import { CULTIVOS } from '../modelo/etiquetas';
-import { Boton, Dato, Opciones, Pantalla, Tarjeta, TituloSeccion, Vacio } from '../componentes/ui';
+import { Boton, cx, Dato, Opciones, Pantalla, Tarjeta, TituloSeccion, Vacio } from '../componentes/ui';
+import { BotonesInforme } from '../componentes/Informes';
 import { BarraRinde, EtiquetaEstado, MargenGrande, ResumenNumeros } from '../componentes/Resultado';
 import { dinero, numero } from '../utilidades/formato';
 
@@ -63,12 +64,27 @@ export default function Resultados() {
                 {resumen.hectareasSembradas > resumen.hectareas + 0.01 && <span className="block text-xs">{numero(resumen.hectareasSembradas)} ha sembradas</span>}
               </span>
             </div>
-            <div className="mt-2 text-xs text-white/70">Margen neto</div>
-            <div className="num text-4xl font-extrabold tracking-tight">{dinero(resumen.margenNetoUsd, moneda, tipoCambio, 0)}</div>
-            <div className="num text-sm text-white/80">{dinero(resumen.margenNetoPorHaUsd, moneda, tipoCambio, 0)} por ha</div>
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/15 pt-3 text-sm">
-              <div><div className="text-white/60">Costo total</div><div className="num font-bold">{dinero(resumen.costoTotalUsd, moneda, tipoCambio, 0)}</div></div>
-              <div><div className="text-white/60">Ingreso total</div><div className="num font-bold">{dinero(resumen.ingresoTotalUsd, moneda, tipoCambio, 0)}</div></div>
+            <div className="mt-3 overflow-hidden rounded-xl bg-white/[0.06] ring-1 ring-white/15">
+              <div className="grid grid-cols-[1fr_auto_auto] text-[11px] font-bold uppercase tracking-wider text-white/60">
+                <span className="px-3 py-2" />
+                <span className="px-3 py-2 text-right">Por hectárea</span>
+                <span className="border-l border-white/15 px-3 py-2 text-right">Total</span>
+              </div>
+              {([
+                ['Costo', resumen.costoTotalUsd, false],
+                ['Ingreso', resumen.ingresoTotalUsd, false],
+                ['Margen neto', resumen.margenNetoUsd, true],
+              ] as const).map(([concepto, total, fuerte]) => (
+                <div key={concepto} className={cx('grid grid-cols-[1fr_auto_auto] items-baseline border-t border-white/15', fuerte && 'bg-white/10')}>
+                  <span className={cx('px-3 py-2.5 text-sm', fuerte ? 'font-bold text-trigo' : 'text-white/80')}>{concepto}</span>
+                  <span className={cx('num whitespace-nowrap px-3 py-2.5 text-right', fuerte ? 'text-lg font-extrabold' : 'font-semibold')}>
+                    {dinero(total === null || !resumen.hectareas ? null : total / resumen.hectareas, moneda, tipoCambio, 0)}
+                  </span>
+                  <span className={cx('num whitespace-nowrap border-l border-white/15 px-3 py-2.5 text-right', fuerte ? 'text-lg font-extrabold' : 'font-semibold')}>
+                    {dinero(total, moneda, tipoCambio, 0)}
+                  </span>
+                </div>
+              ))}
             </div>
             {(hayProyectados || resumen.cultivosSinPrecio > 0) && (
               <p className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs text-white/85">
@@ -81,6 +97,8 @@ export default function Resultados() {
               Todavía no incluye gastos de estructura (contador, seguros, vehículos): llegan en la próxima versión.
             </p>
           </div>
+
+          <BotonesInforme compacto />
 
           <TituloSeccion>Por cultivo · de mayor a menor margen</TituloSeccion>
           {ordenadas.map(({ cultivo, lote, campo, resultado: r }) => (
@@ -96,9 +114,7 @@ export default function Resultados() {
                   </div>
                   <EtiquetaEstado r={r} />
                 </div>
-                <div className="mt-3 flex items-end justify-between gap-3">
-                  <MargenGrande r={r} moneda={moneda} tc={tipoCambio} />
-                </div>
+                <div className="mt-3"><MargenGrande r={r} moneda={moneda} tc={tipoCambio} /></div>
                 <div className="mt-2"><BarraRinde r={r} u={u} /></div>
                 <div className="mt-2"><ResumenNumeros r={r} moneda={moneda} tc={tipoCambio} u={u} /></div>
                 {r.avisos.length > 0 && <Dato etiqueta={<span className="text-trigo-700">⚠ Faltan datos</span>} valor={<span className="text-sm text-trigo-700">Ver detalle</span>} />}

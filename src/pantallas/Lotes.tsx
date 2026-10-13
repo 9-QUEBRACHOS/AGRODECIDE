@@ -5,15 +5,18 @@ import { db, nuevoId } from '../db/baseDatos';
 import { borrarCampo } from '../db/operaciones';
 import { useEspacio } from '../estado';
 import { CULTIVOS } from '../modelo/etiquetas';
-import type { Campo as TCampo, Lote, Tenencia } from '../modelo/tipos';
+import type { AlquilerLote, Campo as TCampo, Lote, Moneda, Tenencia } from '../modelo/tipos';
+import { alquilerTotalLote } from '../calculos/margen';
 import { BotonAgregar, Boton, Campo, Entrada, EntradaNumero, FilaLink, Formulario, Hoja, Opciones, Pantalla, Selector, Tarjeta, Vacio } from '../componentes/ui';
-import { leerNumero, numero } from '../utilidades/formato';
+import { dinero, leerNumero, numero } from '../utilidades/formato';
 
 export default function Lotes() {
-  const { espacio, campania } = useEspacio();
+  const { espacio, campania, tipoCambio } = useEspacio();
   const navegar = useNavigate();
   const campos = useLiveQuery(() => db.campos.where('espacioId').equals(espacio.id).sortBy('nombre'), [espacio.id]);
   const lotes = useLiveQuery(() => db.lotes.where('espacioId').equals(espacio.id).sortBy('nombre'), [espacio.id]);
+  const alquileres = useLiveQuery(
+    () => (campania ? db.alquileres.where('campaniaId').equals(campania.id).toArray() : []), [campania?.id]);
   const cultivos = useLiveQuery(
     () => (campania ? db.cultivos.where('campaniaId').equals(campania.id).toArray() : []), [campania?.id]);
 
@@ -60,7 +63,12 @@ export default function Lotes() {
                     key={l.id}
                     to={`/lotes/${l.id}`}
                     titulo={l.nombre}
-                    detalle={`${numero(l.hectareas, l.hectareas % 1 ? 1 : 0)} ha · ${l.tenencia === 'propio' ? 'Propio' : 'Alquilado'}`}
+                    detalle={
+                      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                        <span>{numero(l.hectareas, l.hectareas % 1 ? 1 : 0)} ha · {l.tenencia === 'propio' ? 'Propio' : 'Alquilado'}</span>
+                        <ChipAlquiler lote={l} alquiler={(alquileres ?? []).find((a) => a.loteId === l.id)} moneda={espacio.monedaReporte} tc={tipoCambio} />
+                      </span>
+                    }
                     derecha={
                       <span className="text-sm font-semibold text-campo-700">
                         {enCampania.length
@@ -94,6 +102,17 @@ export default function Lotes() {
       </Hoja>
     </Pantalla>
   );
+}
+
+function ChipAlquiler({ lote, alquiler, moneda, tc }: { lote: Lote; alquiler?: AlquilerLote; moneda: Moneda; tc: number }) {
+  if (!alquiler) {
+    if (lote.tenencia === 'propio') return null;
+    return <span className="rounded-full bg-trigo/25 px-2 py-0.5 text-xs font-semibold text-trigo-700">Falta el alquiler</span>;
+  }
+  const texto = alquiler.modalidad === 'porcentaje_cosecha'
+    ? `${numero(alquiler.valor, 1)}% cosecha`
+    : `${dinero(alquilerTotalLote(alquiler, lote.hectareas) / lote.hectareas, moneda, tc, 0)}/ha`;
+  return <span className="rounded-full bg-campo-100 px-2 py-0.5 text-xs font-semibold text-campo-800">Alquiler {texto}</span>;
 }
 
 function FormCampo({ campo, espacioId, provincia, onListo }: { campo?: TCampo; espacioId: string; provincia: string; onListo: (nuevoId?: string) => void }) {

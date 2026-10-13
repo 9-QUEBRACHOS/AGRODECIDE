@@ -64,7 +64,7 @@ export function FilaLink({ to, titulo, detalle, derecha }: { to: string; titulo:
     <Link to={to} className="flex items-center gap-3 rounded-xl px-1 py-3 active:bg-campo-50">
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold text-campo-900">{titulo}</div>
-        {detalle && <div className="truncate text-sm text-stone-600">{detalle}</div>}
+        {detalle && <div className={cx('text-sm text-stone-600', typeof detalle === 'string' && 'truncate')}>{detalle}</div>}
       </div>
       {derecha && <div className="shrink-0 text-right">{derecha}</div>}
       <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-stone-400" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>

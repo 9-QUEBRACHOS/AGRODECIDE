@@ -5,11 +5,11 @@ import { db, nuevoId } from '../db/baseDatos';
 import { borrarLote } from '../db/operaciones';
 import { useEspacio } from '../estado';
 import { CULTIVOS, MODALIDADES_ALQUILER } from '../modelo/etiquetas';
-import type { AlquilerLote, CultivoEnLote, Lote, ModalidadAlquiler, TipoCultivo, UnidadGrano } from '../modelo/tipos';
+import type { AlquilerLote, CultivoEnLote, Lote, ModalidadAlquiler, Moneda, TipoCultivo, UnidadGrano } from '../modelo/tipos';
 import { alquilerTotalLote } from '../calculos/margen';
 import { aUsd } from '../calculos/moneda';
 import {
-  BotonAgregar, Boton, Campo, Dato, Entrada, EntradaImporte, EntradaNumero, Etiqueta, FilaLink, formDeImporte,
+  BotonAgregar, Boton, Campo, Entrada, EntradaImporte, EntradaNumero, Etiqueta, FilaLink, formDeImporte,
   Formulario, Hoja, importeDeForm, Opciones, Pantalla, Selector, Tarjeta, TituloSeccion, Vacio,
 } from '../componentes/ui';
 import { dinero, factorGrano, leerNumero, numero } from '../utilidades/formato';
@@ -44,6 +44,9 @@ export default function LoteDetalle() {
 
       {!campania ? <Vacio titulo="Creá una campaña en Ajustes para cargar cultivos." /> : (
         <>
+          <TarjetaAlquiler lote={lote} alquiler={alquiler} campaniaNombre={campania.nombre} moneda={espacio.monedaReporte} tc={tipoCambio}
+            onEditar={() => setEditAlquiler(true)} />
+
           <TituloSeccion accion={(cultivos?.length ?? 0) > 0 && <BotonAgregar onClick={() => setNuevoCultivo(true)}>Cultivo</BotonAgregar>}>
             Cultivos {campania.nombre}
           </TituloSeccion>
@@ -66,34 +69,6 @@ export default function LoteDetalle() {
               Los cultivos absorben {numero(sumaPorcentajes)}% del alquiler en total (debería ser 100%). Ajustalo dentro de cada cultivo.
             </p>
           )}
-
-          <TituloSeccion>{esPropio ? 'Alquiler de referencia' : 'Alquiler'} {campania.nombre}</TituloSeccion>
-          <Tarjeta>
-            {alquiler ? (
-              <button className="block w-full text-left" onClick={() => setEditAlquiler(true)}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-campo-900">{describirAlquiler(alquiler)}</span>
-                  <span className="text-sm font-semibold text-campo-700">Editar</span>
-                </div>
-                {alquiler.modalidad !== 'porcentaje_cosecha' && (
-                  <div className="mt-1">
-                    <Dato etiqueta="Total del lote" valor={dinero(alquilerTotalLote(alquiler, lote.hectareas), espacio.monedaReporte, tipoCambio)} />
-                    <Dato etiqueta="Por hectárea" valor={dinero(alquilerTotalLote(alquiler, lote.hectareas) / lote.hectareas, espacio.monedaReporte, tipoCambio)} />
-                  </div>
-                )}
-                {esPropio && <p className="mt-1 text-xs text-stone-500">Es un costo de oportunidad: lo que cobrarías si lo alquilaras. Los resultados muestran el margen con y sin él.</p>}
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-stone-600">
-                  {esPropio
-                    ? 'El campo es propio, pero si lo alquilaras cobrarías algo. Cargá ese valor para ver si te conviene más producir o alquilar.'
-                    : 'Cargá cuánto pagás de alquiler esta campaña.'}
-                </p>
-                <Boton variante="secundario" onClick={() => setEditAlquiler(true)}>{esPropio ? 'Cargar alquiler de referencia' : 'Cargar alquiler'}</Boton>
-              </div>
-            )}
-          </Tarjeta>
         </>
       )}
 
@@ -117,6 +92,53 @@ export default function LoteDetalle() {
         </>
       )}
     </Pantalla>
+  );
+}
+
+/** Alquiler del lote en la campaña: siempre arriba y a la vista. */
+export function TarjetaAlquiler({ lote, alquiler, campaniaNombre, moneda, tc, onEditar }: {
+  lote: Lote; alquiler?: AlquilerLote; campaniaNombre: string; moneda: Moneda; tc: number; onEditar: () => void;
+}) {
+  const esPropio = lote.tenencia === 'propio';
+  const titulo = `${esPropio ? 'Alquiler de referencia' : 'Alquiler'} · campaña ${campaniaNombre}`;
+  if (!alquiler) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-trigo bg-trigo/10 p-4">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-trigo-700">{titulo}</div>
+        <p className="mt-1 text-sm text-stone-700">
+          {esPropio
+            ? 'Sin cargar. Si lo alquilaras cobrarías algo: cargalo para saber si te conviene más producir o alquilar.'
+            : 'Sin cargar. Sin el alquiler, el costo y el margen de este lote no son reales.'}
+        </p>
+        <Boton className="mt-3 w-full" onClick={onEditar}>{esPropio ? 'Cargar alquiler de referencia' : 'Cargar alquiler'}</Boton>
+      </div>
+    );
+  }
+  const total = alquilerTotalLote(alquiler, lote.hectareas);
+  const aPorcentaje = alquiler.modalidad === 'porcentaje_cosecha';
+  return (
+    <button onClick={onEditar} className="block w-full rounded-2xl bg-campo-800 p-4 text-left text-white shadow-md">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-trigo">{titulo}</span>
+        <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">Editar</span>
+      </div>
+      <div className="mt-1 text-sm text-white/80">{describirAlquiler(alquiler)}</div>
+      {aPorcentaje ? (
+        <p className="mt-2 text-sm text-white/80">Se calcula sobre lo que produzca cada cultivo del lote.</p>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-white/10 px-3 py-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-white/60">Por hectárea</div>
+            <div className="num text-xl font-extrabold">{dinero(total / lote.hectareas, moneda, tc, 0)}</div>
+          </div>
+          <div className="rounded-xl bg-white/10 px-3 py-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-white/60">Total del lote</div>
+            <div className="num text-xl font-extrabold">{dinero(total, moneda, tc, 0)}</div>
+          </div>
+        </div>
+      )}
+      {esPropio && <p className="mt-2 text-xs text-white/60">Costo de oportunidad: los resultados muestran el margen con y sin él.</p>}
+    </button>
   );
 }
 

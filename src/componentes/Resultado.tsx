@@ -47,49 +47,74 @@ export function BarraRinde({ r, u }: { r: ResultadoCultivo; u: UnidadGrano }) {
   );
 }
 
+const tonoDe = (v: number | null) => (v === null ? '' : v >= 0 ? 'text-campo-700' : 'text-tierra');
+
+/**
+ * Cuadro económico con dos columnas bien separadas: "Por hectárea" y "Total".
+ * Cada fila es el mismo concepto visto de las dos formas.
+ */
 export function ResumenNumeros({ r, moneda, tc, u, completo }: { r: ResultadoCultivo; moneda: Moneda; tc: number; u: UnidadGrano; completo?: boolean }) {
   const d = (v: number | null, dec?: number) => dinero(v, moneda, tc, dec);
-  const tono = (v: number | null) => (v === null ? undefined : v >= 0 ? 'pos' : 'neg') as 'pos' | 'neg' | undefined;
   const porHa = (v: number | null) => (v === null || !r.hectareas ? null : v / r.hectareas);
+  type Fila = { concepto: string; total: number | null; fuerte?: boolean; signo?: boolean; separador?: boolean };
+  const filas: Fila[] = [
+    { concepto: 'Labores e insumos', total: r.costoDirectoUsd },
+    ...(r.alquilerUsd > 0 ? [{ concepto: r.alquilerEsReferencia ? 'Alquiler (referencia)' : 'Alquiler', total: r.alquilerUsd }] : []),
+    { concepto: 'Costo total', total: r.costoTotalUsd, fuerte: true },
+    { concepto: 'Ingreso', total: r.ingresoTotalUsd, separador: true },
+    ...(completo ? [{ concepto: 'Margen bruto', total: r.margenBrutoUsd, signo: true }] : []),
+    { concepto: 'Margen neto', total: r.margenNetoUsd, fuerte: true, signo: true },
+    ...(r.margenNetoSinOportunidadUsd !== null ? [{ concepto: 'Margen sin alquiler propio', total: r.margenNetoSinOportunidadUsd, signo: true }] : []),
+  ];
   return (
-    <div className="divide-y divide-stone-100">
-      <div className="pb-1">
-        <Dato etiqueta="Costo directo / ha" valor={d(r.costoDirectoPorHaUsd)} />
-        {r.alquilerUsd > 0 && <Dato etiqueta={r.alquilerEsReferencia ? 'Alquiler de referencia / ha' : 'Alquiler / ha'} valor={d(porHa(r.alquilerUsd))} />}
-        <Dato etiqueta="Costo total / ha" valor={d(r.costoTotalPorHaUsd)} fuerte />
-        <Dato etiqueta={`Costo por ${u}`} valor={r.costoPorKgUsd === null ? '—' : d(r.costoPorKgUsd * factorGrano(u), 2)} />
+    <div className="space-y-3">
+      <div className="overflow-hidden rounded-xl border border-stone-200">
+        <table className="w-full text-[13px] sm:text-sm">
+          <thead>
+            <tr className="bg-campo-800 text-white">
+              <th className="px-2.5 py-2 text-left text-[11px] font-bold uppercase tracking-wider">Concepto</th>
+              <th className="px-2.5 py-2 text-right text-[11px] font-bold uppercase tracking-wider">Por ha</th>
+              <th className="border-l border-white/20 px-2.5 py-2 text-right text-[11px] font-bold uppercase tracking-wider">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.concepto} className={cx(f.separador && 'border-t-2 border-stone-300', !f.separador && 'border-t border-stone-100', f.fuerte && 'bg-campo-50')}>
+                <td className={cx('px-2.5 py-2 leading-tight', f.fuerte ? 'font-bold text-campo-900' : 'text-stone-700')}>{f.concepto}</td>
+                <td className={cx('num whitespace-nowrap px-2.5 py-2 text-right', f.fuerte && 'font-bold', f.signo && tonoDe(f.total))}>{d(porHa(f.total))}</td>
+                <td className={cx('num whitespace-nowrap border-l border-stone-200 px-2.5 py-2 text-right', f.fuerte && 'font-bold', f.signo && tonoDe(f.total))}>{d(f.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+      <Dato etiqueta={`Costo por ${u} producido`} valor={r.costoPorKgUsd === null ? '—' : d(r.costoPorKgUsd * factorGrano(u), 2)} />
       {completo && (
-        <div className="py-1">
+        <div className="rounded-xl bg-stone-50 px-3 py-1">
+          <div className="pt-2 text-[11px] font-bold uppercase tracking-wider text-campo-700">Producción y ventas</div>
           <Dato etiqueta={r.esProyectado ? 'Producción estimada' : 'Cosechado'} valor={grano(r.kgProduccion, u)} />
           <Dato etiqueta="Vendido" valor={grano(r.kgVendidos, u)} />
-          {r.kgSinVender > 0 && <Dato etiqueta="Sin vender (valuado a precio de referencia)" valor={grano(r.kgSinVender, u)} />}
-          <Dato etiqueta="Ventas netas de gastos" valor={d(r.ingresoNetoVentasUsd)} />
+          {r.kgSinVender > 0 && <Dato etiqueta="Sin vender (a precio de referencia)" valor={grano(r.kgSinVender, u)} />}
+          <Dato etiqueta="Ventas, netas de gastos" valor={d(r.ingresoNetoVentasUsd)} />
           {r.kgSinVender > 0 && <Dato etiqueta="Valor de lo no vendido" valor={d(r.valorSinVenderUsd)} />}
-          <Dato etiqueta="Ingreso total" valor={d(r.ingresoTotalUsd)} fuerte />
-          <Dato etiqueta="Costo directo total" valor={d(r.costoDirectoUsd)} />
-          {r.alquilerUsd > 0 && <Dato etiqueta={r.alquilerEsReferencia ? 'Alquiler de referencia total' : 'Alquiler total'} valor={d(r.alquilerUsd)} />}
-          <Dato etiqueta="Margen bruto" valor={d(r.margenBrutoUsd)} tono={tono(r.margenBrutoUsd)} />
         </div>
       )}
-      <div className="pt-1">
-        <Dato etiqueta="Margen neto" valor={d(r.margenNetoUsd)} fuerte tono={tono(r.margenNetoUsd)} />
-        {r.margenNetoSinOportunidadUsd !== null && (
-          <Dato etiqueta="Margen sin contar alquiler propio" valor={d(r.margenNetoSinOportunidadUsd)} tono={tono(r.margenNetoSinOportunidadUsd)} />
-        )}
-      </div>
     </div>
   );
 }
 
-/** Número grande del margen neto por hectárea. */
+
+/** Margen neto destacado, por hectárea y total, cada uno en su caja. */
 export function MargenGrande({ r, moneda, tc }: { r: ResultadoCultivo; moneda: Moneda; tc: number }) {
-  const v = r.margenNetoPorHaUsd;
   return (
-    <div>
-      <div className="text-xs font-semibold text-stone-500">Margen neto por hectárea</div>
-      <div className={cx('num text-3xl font-extrabold tracking-tight', v === null ? 'text-stone-400' : v >= 0 ? 'text-campo-700' : 'text-tierra')}>
-        {dinero(v, moneda, tc, 0)}
+    <div className="grid grid-cols-2 gap-2">
+      <div className="rounded-xl bg-campo-50 px-3 py-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Margen por ha</div>
+        <div className={cx('num whitespace-nowrap text-xl font-extrabold tracking-tight sm:text-2xl', tonoDe(r.margenNetoPorHaUsd) || 'text-stone-400')}>{dinero(r.margenNetoPorHaUsd, moneda, tc, 0)}</div>
+      </div>
+      <div className="rounded-xl border border-stone-200 px-3 py-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Margen total</div>
+        <div className={cx('num whitespace-nowrap text-xl font-extrabold tracking-tight sm:text-2xl', tonoDe(r.margenNetoUsd) || 'text-stone-400')}>{dinero(r.margenNetoUsd, moneda, tc, 0)}</div>
       </div>
     </div>
   );

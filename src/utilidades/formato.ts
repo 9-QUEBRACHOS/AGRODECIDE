@@ -14,7 +14,7 @@ export function dinero(usd: number | null | undefined, moneda: Moneda, tc: numbe
   if (usd === null || usd === undefined || !Number.isFinite(usd)) return '—';
   const v = deUsd(usd, moneda, tc);
   const d = dec ?? (Math.abs(v) < 10 ? 2 : 0);
-  return `${moneda === 'USD' ? 'US$' : '$'} ${nf(d).format(v)}`;
+  return `${moneda === 'USD' ? 'US$' : '$'}\u00a0${nf(d).format(v)}`; // espacio que no corta línea
 }
 
 export const factorGrano = (u: UnidadGrano) => (u === 'qq' ? 100 : 1000);

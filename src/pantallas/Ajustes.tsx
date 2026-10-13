@@ -6,6 +6,8 @@ import { cargarEjemplo } from '../db/ejemplo';
 import { useEspacio } from '../estado';
 import { CONDICIONES_FISCALES, PROVINCIAS } from '../modelo/etiquetas';
 import type { Campania, CondicionFiscal, Espacio } from '../modelo/tipos';
+import { BotonesInforme } from '../componentes/Informes';
+import { entregarArchivo } from '../utilidades/descargas';
 import { BotonAgregar, Boton, Campo, Dato, Entrada, EntradaNumero, Formulario, Hoja, Opciones, Pantalla, Selector, Tarjeta, TituloSeccion } from '../componentes/ui';
 import { campaniaSugerida, fecha, hoy, leerNumero, numero } from '../utilidades/formato';
 
@@ -13,21 +15,6 @@ export async function importarDesdeArchivo(archivo: File): Promise<string> {
   let contenido: unknown;
   try { contenido = JSON.parse(await archivo.text()); } catch { throw new Error('El archivo no se pudo leer. ¿Es un respaldo de AgroDecide (.json)?'); }
   return importarEspacio(contenido);
-}
-
-async function descargar(nombre: string, texto: string) {
-  // En celulares (sobre todo iPhone con la app instalada) la descarga directa no anda: se usa "Compartir".
-  const archivo = new File([texto], nombre, { type: 'application/json' });
-  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  if (/Android|iPhone|iPad/i.test(navigator.userAgent) && nav.canShare?.({ files: [archivo] })) {
-    try { await navigator.share({ files: [archivo], title: 'Respaldo de AgroDecide' }); return; }
-    catch (e) { if ((e as Error).name === 'AbortError') return; }
-  }
-  const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = nombre;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 export default function Ajustes() {
@@ -79,11 +66,19 @@ export default function Ajustes() {
         </div>
       </Tarjeta>
 
-      <TituloSeccion>Respaldo y traspaso</TituloSeccion>
+      <TituloSeccion>Informes de la campaña {campania?.nombre}</TituloSeccion>
       <Tarjeta className="space-y-3">
         <p className="text-sm text-stone-600">
-          Tus datos están solo en este dispositivo. Exportá un respaldo de vez en cuando, o para pasarle el espacio a otra persona
-          (por ejemplo, a tu asesor o a tu cliente).
+          Un informe prolijo para leer, imprimir o mandar: resultado por cultivo, alquileres, labores e insumos, cosechas y ventas.
+        </p>
+        <BotonesInforme />
+      </Tarjeta>
+
+      <TituloSeccion>Respaldo de datos (para la app)</TituloSeccion>
+      <Tarjeta className="space-y-3">
+        <p className="text-sm text-stone-600">
+          Tus datos están solo en este dispositivo. El respaldo es un archivo para volver a cargar en AgroDecide (en otro celular,
+          o para pasárselo a tu asesor). No es para leerlo: para eso usá los informes de arriba.
         </p>
         {persistente === false && (
           <p className="rounded-xl bg-trigo/20 px-3 py-2 text-sm">
@@ -94,11 +89,11 @@ export default function Ajustes() {
         <Boton className="w-full" onClick={async () => {
           const archivo = await exportarEspacio(espacio.id);
           const nombre = `agrodecide-${espacio.nombre.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-${hoy()}.json`;
-          await descargar(nombre, JSON.stringify(archivo, null, 2));
+          await entregarArchivo(nombre, new Blob([JSON.stringify(archivo)], { type: 'application/json' }), 'Respaldo de AgroDecide');
           setMensaje('Respaldo descargado. Guardalo en un lugar seguro (Drive, mail, pendrive).');
-        }}>Exportar este espacio</Boton>
+        }}>Guardar respaldo</Boton>
         <label className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-white font-semibold text-campo-800 ring-1 ring-inset ring-campo-800/25 hover:bg-campo-50">
-          Importar un respaldo
+          Cargar un respaldo
           <input type="file" accept=".json,application/json" className="hidden" onChange={async (e) => {
             const f = e.target.files?.[0];
             e.target.value = '';

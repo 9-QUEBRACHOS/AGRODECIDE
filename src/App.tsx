@@ -52,7 +52,7 @@ function Encabezado() {
     <header className="sticky top-0 z-40 bg-campo-800 text-white shadow-md">
       <div className="mx-auto flex h-14 max-w-2xl items-center gap-2 px-4">
         <button onClick={() => setAbierto(true)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <img src="./favicon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-white/20" />
+          <img src="./icono-192.png" alt="" className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-white/20" />
           <span className="min-w-0">
             <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-trigo">AgroDecide</span>
             <span className="flex items-center gap-1 truncate text-[15px] font-semibold leading-tight">

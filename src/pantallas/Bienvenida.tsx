@@ -60,7 +60,7 @@ export default function Bienvenida() {
     <div className="min-h-dvh bg-campo-800 text-white">
       <div className="mx-auto flex min-h-dvh max-w-md flex-col px-6 py-10">
         <div className="flex items-center gap-3">
-          <img src="./favicon.svg" alt="" className="h-12 w-12 rounded-xl ring-1 ring-white/20" />
+          <img src="./icono-192.png" alt="" className="h-12 w-12 rounded-xl ring-1 ring-white/20" />
           <div>
             <div className="text-2xl font-extrabold tracking-tight">AgroDecide</div>
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-trigo">Del dato a la decisión</div>
@@ -82,7 +82,7 @@ export default function Bienvenida() {
               <li className="flex gap-2"><span className="text-trigo">●</span> Pesos y dólares, cada gasto con su dólar del día.</li>
             </ul>
             <div className="mt-auto space-y-3 pt-10">
-              <Boton className="w-full bg-trigo text-campo-900 hover:bg-trigo/90" onClick={() => setPaso('crear')}>Empezar con mi campo</Boton>
+              <Boton className="w-full bg-trigo! text-campo-900! hover:bg-trigo/90!" onClick={() => setPaso('crear')}>Empezar con mi campo</Boton>
               <Boton variante="fantasma" className="w-full text-white hover:bg-white/10"
                 onClick={async () => { const r = await cargarEjemplo(); elegirEspacio(r.espacioId); elegirCampania(r.campaniaId); }}>
                 Ver un campo de ejemplo

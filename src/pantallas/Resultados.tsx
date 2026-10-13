@@ -19,7 +19,10 @@ export default function Resultados() {
     () => [...(filas ?? [])].sort((a, b) => (b.resultado.margenNetoPorHaUsd ?? -Infinity) - (a.resultado.margenNetoPorHaUsd ?? -Infinity)),
     [filas],
   );
-  const resumen = useMemo(() => resumir(ordenadas.map((f) => f.resultado)), [ordenadas]);
+  const resumen = useMemo(() => {
+    const lotes = new Map(ordenadas.map((f) => [f.lote.id, f.lote.hectareas]));
+    return resumir(ordenadas.map((f) => f.resultado), [...lotes.values()].reduce((s, h) => s + h, 0));
+  }, [ordenadas]);
   const hayProyectados = ordenadas.some((f) => f.resultado.esProyectado);
 
   if (!campania) {
@@ -56,7 +59,9 @@ export default function Resultados() {
           <div className="rounded-2xl bg-campo-800 p-4 text-white shadow-md">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-trigo">Total campaña</span>
-              <span className="text-sm text-white/70">{numero(resumen.hectareas)} ha</span>
+              <span className="text-right text-sm text-white/70">{numero(resumen.hectareas)} ha
+                {resumen.hectareasSembradas > resumen.hectareas + 0.01 && <span className="block text-xs">{numero(resumen.hectareasSembradas)} ha sembradas</span>}
+              </span>
             </div>
             <div className="mt-2 text-xs text-white/70">Margen neto</div>
             <div className="num text-4xl font-extrabold tracking-tight">{dinero(resumen.margenNetoUsd, moneda, tipoCambio, 0)}</div>
@@ -72,6 +77,9 @@ export default function Resultados() {
                   : 'Incluye cultivos proyectados con rinde y precio estimados.'}
               </p>
             )}
+            <p className="mt-3 text-[11px] leading-snug text-white/55">
+              Todavía no incluye gastos de estructura (contador, seguros, vehículos): llegan en la próxima versión.
+            </p>
           </div>
 
           <TituloSeccion>Por cultivo · de mayor a menor margen</TituloSeccion>

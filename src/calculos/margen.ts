@@ -111,7 +111,7 @@ export function calcularCultivo(e: EntradaCultivo): ResultadoCultivo {
   const kgVendidos = e.ventas.reduce((s, v) => s + (v.kg || 0), 0);
   const ingresoBrutoVentasUsd = e.ventas.reduce((s, v) => s + ((v.kg || 0) * aUsd(v.precioPorTn)) / 1000, 0);
   const gastosComercialesUsd = e.ventas.reduce(
-    (s, v) => s + v.gastosComerciales.reduce((g, gc) => g + aUsd(gc.importe), 0), 0,
+    (s, v) => s + (v.gastosComerciales ?? []).reduce((g, gc) => g + aUsd(gc.importe), 0), 0,
   );
   const ingresoNetoVentasUsd = ingresoBrutoVentasUsd - gastosComercialesUsd;
   if (!esProyectado && kgVendidos > kgCosechados) avisos.push('vendido_mas_que_cosechado');
@@ -144,7 +144,8 @@ export function calcularCultivo(e: EntradaCultivo): ResultadoCultivo {
       alquilerUsd = alquilerTotalLote(e.alquiler, e.lote.hectareas) * (e.cultivo.porcentajeAlquiler ?? 100) / 100;
     }
   }
-  const alquilerEsReferencia = e.alquiler?.tipo === 'referencia';
+  // Si el lote es propio, el alquiler cargado es un costo de oportunidad (aunque se haya cambiado la tenencia después).
+  const alquilerEsReferencia = !!e.alquiler && e.lote.tenencia === 'propio';
 
   // --- Totales
   const estructuraUsd = e.estructuraAsignadaUsd ?? 0;
@@ -156,8 +157,18 @@ export function calcularCultivo(e: EntradaCultivo): ResultadoCultivo {
     alquilerEsReferencia && margenBrutoUsd !== null ? margenBrutoUsd - estructuraUsd : null;
 
   const costoTotalPorHaUsd = dividir(costoTotalUsd, ha);
-  const rindeIndiferenciaKgHa =
-    costoTotalPorHaUsd !== null && precioEfectivoKgUsd ? costoTotalPorHaUsd / precioEfectivoKgUsd : null;
+  let rindeIndiferenciaKgHa: number | null = null;
+  if (costoTotalPorHaUsd !== null && precioEfectivoKgUsd) {
+    if (e.alquiler?.modalidad === 'porcentaje_cosecha') {
+      // El alquiler crece con el rinde: el productor se queda con (1 − %) de cada kilo.
+      const parteProductor = 1 - e.alquiler.valor / 100;
+      rindeIndiferenciaKgHa = parteProductor > 0
+        ? ((costoTotalUsd - alquilerUsd) / ha) / (precioEfectivoKgUsd * parteProductor)
+        : null;
+    } else {
+      rindeIndiferenciaKgHa = costoTotalPorHaUsd / precioEfectivoKgUsd;
+    }
+  }
 
   return {
     hectareas: ha,
@@ -194,6 +205,7 @@ export function calcularCultivo(e: EntradaCultivo): ResultadoCultivo {
 
 export interface ResumenCampania {
   hectareas: number;
+  hectareasSembradas: number;
   costoTotalUsd: number;
   ingresoTotalUsd: number | null;
   margenNetoUsd: number | null;
@@ -202,8 +214,13 @@ export interface ResumenCampania {
 }
 
 /** Suma los resultados de varios cultivos. Si alguno no tiene precio, los ingresos quedan incompletos. */
-export function resumir(resultados: ResultadoCultivo[]): ResumenCampania {
-  const hectareas = resultados.reduce((s, r) => s + r.hectareas, 0);
+/**
+ * `hectareasFisicas`: superficie real de los lotes (un lote con doble cultivo cuenta una vez).
+ * Si no se pasa, se suman las hectáreas de cada cultivo.
+ */
+export function resumir(resultados: ResultadoCultivo[], hectareasFisicas?: number): ResumenCampania {
+  const hectareasSembradas = resultados.reduce((s, r) => s + r.hectareas, 0);
+  const hectareas = hectareasFisicas ?? hectareasSembradas;
   const costoTotalUsd = resultados.reduce((s, r) => s + r.costoTotalUsd, 0);
   const cultivosSinPrecio = resultados.filter((r) => r.ingresoTotalUsd === null).length;
   const conPrecio = cultivosSinPrecio === 0;
@@ -211,6 +228,7 @@ export function resumir(resultados: ResultadoCultivo[]): ResumenCampania {
   const margenNetoUsd = conPrecio ? resultados.reduce((s, r) => s + (r.margenNetoUsd ?? 0), 0) : null;
   return {
     hectareas,
+    hectareasSembradas,
     costoTotalUsd,
     ingresoTotalUsd,
     margenNetoUsd,

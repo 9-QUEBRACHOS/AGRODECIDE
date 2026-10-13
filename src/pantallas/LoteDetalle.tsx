@@ -142,7 +142,7 @@ function FormAlquiler({ lote, campaniaId, alquiler, tipoCambio, onListo }: { lot
   return (
     <Formulario
       error={error}
-      onBorrar={alquiler ? async () => { await db.alquileres.delete(alquiler.id); onListo(); } : undefined}
+      onBorrar={alquiler ? async () => { if (confirm('¿Borrar el alquiler de esta campaña?')) { await db.alquileres.delete(alquiler.id); onListo(); } } : undefined}
       onGuardar={async () => {
         try {
           const datos: Omit<AlquilerLote, 'id'> = {
@@ -166,8 +166,9 @@ function FormAlquiler({ lote, campaniaId, alquiler, tipoCambio, onListo }: { lot
               datos.precioSojaReferencia = p;
             }
           }
-          if (alquiler) await db.alquileres.put({ ...datos, id: alquiler.id });
-          else await db.alquileres.add({ ...datos, id: nuevoId() });
+          // Uno solo por lote y campaña: si ya existe (por ejemplo, por un doble toque), se reemplaza.
+          const existente = alquiler ?? await db.alquileres.where({ loteId: lote.id, campaniaId }).first();
+          await db.alquileres.put({ ...datos, id: existente?.id ?? nuevoId() });
           onListo();
         } catch (e) { setError((e as Error).message); }
       }}
@@ -275,7 +276,7 @@ export function FormCultivo({ lote, campaniaId, cultivo, otros, unidad, tipoCamb
           <Campo etiqueta="Precio estimado de venta" ayuda="Por tonelada, neto de lo que te paga el comprador.">{(id) => <EntradaImporte id={id} valor={precio} onCambio={setPrecio} sufijo="/tn" />}</Campo>
         </div>
       </div>
-      {cultivo && hermanos.length > 0 && (
+      {cultivo && (hermanos.length > 0 || cultivo.porcentajeAlquiler !== 100) && (
         <Campo etiqueta="Parte del alquiler del lote que absorbe" ayuda="Entre todos los cultivos del lote tiene que sumar 100%.">
           {(id) => <EntradaNumero id={id} valor={porcentaje} onCambio={setPorcentaje} sufijo="%" />}
         </Campo>

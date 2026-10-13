@@ -7,6 +7,10 @@ describe('formato', () => {
     expect(leerNumero('1.234,56')).toBe(1234.56);
     expect(leerNumero('1234.56')).toBe(1234.56);
     expect(Number.isNaN(leerNumero(''))).toBe(true);
+    expect(leerNumero('1.450')).toBe(1450);
+    expect(leerNumero('1.500.000')).toBe(1500000);
+    expect(leerNumero('0.65')).toBe(0.65);
+    expect(leerNumero('1,500.5')).toBe(1500.5);
   });
   it('convierte kg a qq y tn', () => {
     expect(grano(350000, 'qq')).toBe('3.500 qq');

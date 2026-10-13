@@ -48,8 +48,22 @@ export const hoy = () => {
 export function leerNumero(texto: string): number {
   const limpio = texto.trim().replace(/\s/g, '');
   if (limpio === '') return NaN;
-  // "1.234,56" → 1234.56 ; "1234.56" → 1234.56 ; "12,5" → 12.5
-  const normal = limpio.includes(',') ? limpio.replace(/\./g, '').replace(',', '.') : limpio;
+  // Formato argentino: el punto separa miles y la coma los decimales.
+  // "1.234,56" → 1234.56 ; "1.450" → 1450 ; "12,5" → 12.5 ; "1234.56" → 1234.56 ; "1,500.5" → 1500.5
+  const ultimaComa = limpio.lastIndexOf(',');
+  const ultimoPunto = limpio.lastIndexOf('.');
+  let normal: string;
+  if (ultimaComa >= 0 && ultimoPunto >= 0) {
+    normal = ultimaComa > ultimoPunto
+      ? limpio.replace(/\./g, '').replace(',', '.')   // 1.234,56
+      : limpio.replace(/,/g, '');                      // 1,234.56
+  } else if (ultimaComa >= 0) {
+    normal = limpio.replace(',', '.');
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(limpio)) {
+    normal = limpio.replace(/\./g, '');                // 1.450 → miles
+  } else {
+    normal = limpio;
+  }
   return Number(normal);
 }
 

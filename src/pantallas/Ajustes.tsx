@@ -15,7 +15,14 @@ export async function importarDesdeArchivo(archivo: File): Promise<string> {
   return importarEspacio(contenido);
 }
 
-function descargar(nombre: string, texto: string) {
+async function descargar(nombre: string, texto: string) {
+  // En celulares (sobre todo iPhone con la app instalada) la descarga directa no anda: se usa "Compartir".
+  const archivo = new File([texto], nombre, { type: 'application/json' });
+  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent) && nav.canShare?.({ files: [archivo] })) {
+    try { await navigator.share({ files: [archivo], title: 'Respaldo de AgroDecide' }); return; }
+    catch (e) { if ((e as Error).name === 'AbortError') return; }
+  }
   const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url; a.download = nombre;
@@ -31,6 +38,7 @@ export default function Ajustes() {
   const [editCampania, setEditCampania] = useState<Campania | 'nueva' | null>(null);
   const [tc, setTc] = useState(String(tipoCambio));
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const persistente = useLiveQuery(async () => (navigator.storage?.persisted ? navigator.storage.persisted() : true), []);
 
   return (
     <Pantalla titulo="Ajustes">
@@ -77,10 +85,16 @@ export default function Ajustes() {
           Tus datos están solo en este dispositivo. Exportá un respaldo de vez en cuando, o para pasarle el espacio a otra persona
           (por ejemplo, a tu asesor o a tu cliente).
         </p>
+        {persistente === false && (
+          <p className="rounded-xl bg-trigo/20 px-3 py-2 text-sm">
+            Este navegador podría borrar los datos si pasa mucho tiempo sin usar la app o se queda sin espacio.
+            Instalala en la pantalla de inicio y exportá un respaldo seguido.
+          </p>
+        )}
         <Boton className="w-full" onClick={async () => {
           const archivo = await exportarEspacio(espacio.id);
           const nombre = `agrodecide-${espacio.nombre.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-${hoy()}.json`;
-          descargar(nombre, JSON.stringify(archivo, null, 2));
+          await descargar(nombre, JSON.stringify(archivo, null, 2));
           setMensaje('Respaldo descargado. Guardalo en un lugar seguro (Drive, mail, pendrive).');
         }}>Exportar este espacio</Boton>
         <label className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-white font-semibold text-campo-800 ring-1 ring-inset ring-campo-800/25 hover:bg-campo-50">

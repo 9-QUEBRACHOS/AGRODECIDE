@@ -63,7 +63,7 @@ src/
   db/            → definición de Dexie, tablas, migraciones
   modelo/        → tipos TypeScript del dominio (este documento, sección 5)
   calculos/      → funciones puras de cálculo (sección 6), con tests
-  pantallas/     → una carpeta por pantalla
+  pantallas/     → un archivo por pantalla
   componentes/   → componentes reutilizables (formularios, tarjetas, selector de espacio)
   utilidades/    → moneda, unidades, fechas
 ```
@@ -392,7 +392,7 @@ El costo de alimentación de un rodeo es la suma de sus suministros valuados a c
 
 ## 7. Fases de desarrollo
 
-### Fase 1 — Núcleo (MVP)
+### Fase 1 — Núcleo (MVP) ✅ terminada
 1. Proyecto base: Vite + React + TS + Tailwind + Dexie + Router + PWA.
 2. Espacios: crear, renombrar, elegir activo (selector), borrar con confirmación.
 3. Campañas, campos y lotes (ABM).
@@ -417,6 +417,18 @@ El costo de alimentación de un rodeo es la suma de sus suministros valuados a c
 - Alertas de desvío (costo real vs presupuestado).
 - Plantillas de labores por cultivo para cargar más rápido.
 - Sugerencia automática del tipo de cambio.
+
+### Decisiones tomadas al construir la fase 1
+- **Precio de referencia** para valuar lo no vendido: el precio estimado del cultivo; si no hay, el promedio neto de las ventas.
+- **Rinde de indiferencia** = costo total por ha ÷ precio efectivo por kg (ingreso total ÷ kg producidos).
+  Con alquiler a `porcentaje_cosecha`: (costo total − alquiler) por ha ÷ (precio × (1 − %)).
+- **Alquiler a % de cosecha**: cada cultivo entrega su % de lo que produce; no usa `porcentajeAlquiler`.
+- **Costo de oportunidad**: se decide por la tenencia actual del lote (propio = referencia).
+- Al borrar un cultivo de un lote con doble cultivo, los que quedan vuelven a sumar 100% del alquiler.
+- **Totales de campaña** por hectárea física (un lote con doble cultivo cuenta una vez).
+- **Números**: formato argentino. "1.450" = mil cuatrocientos cincuenta; "12,5" = doce y medio.
+- Al cargar una labor nueva, el precio del insumo actualiza el precio de referencia del catálogo.
+- Gastos de estructura: todavía no se cargan (fase 2). La pantalla de resultados lo aclara.
 
 ---
 

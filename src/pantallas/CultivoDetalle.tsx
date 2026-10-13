@@ -260,8 +260,8 @@ function FormLabor({ labor, cultivoId, espacioId, haCultivo, insumos, aplicados,
             });
             await db.insumosAplicados.where('laborId').equals(laborId).delete();
             await db.insumosAplicados.bulkAdd(nuevasFilas.map((n) => ({ ...n, laborId })));
-            // El último precio usado queda como referencia en el catálogo.
-            for (const n of nuevasFilas) await db.insumos.update(n.insumoId, { precioReferencia: n.precioUnitario });
+            // En una labor nueva, el precio usado queda como referencia en el catálogo.
+            if (!labor) for (const n of nuevasFilas) await db.insumos.update(n.insumoId, { precioReferencia: n.precioUnitario });
           });
           onListo();
         } catch (e) { setError((e as Error).message); }
@@ -372,7 +372,7 @@ function FormCosecha({ cosecha, cultivoId, espacioId, ha, unidad, onListo }: {
   return (
     <Formulario
       error={error}
-      onBorrar={cosecha ? async () => { await db.cosechas.delete(cosecha.id); onListo(); } : undefined}
+      onBorrar={cosecha ? async () => { if (confirm('¿Borrar esta cosecha?')) { await db.cosechas.delete(cosecha.id); onListo(); } } : undefined}
       onGuardar={async () => {
         if (!(kg > 0)) return setError('Cargá cuánto cosechaste.');
         await db.cosechas.put({ id: cosecha?.id ?? nuevoId(), espacioId, cultivoEnLoteId: cultivoId, fecha: dia || hoy(), kg });
@@ -423,7 +423,7 @@ function FormVenta({ venta, cultivoId, espacioId, unidad, precioSugerido, onList
   return (
     <Formulario
       error={error}
-      onBorrar={venta ? async () => { await db.ventas.delete(venta.id); onListo(); } : undefined}
+      onBorrar={venta ? async () => { if (confirm('¿Borrar esta venta?')) { await db.ventas.delete(venta.id); onListo(); } } : undefined}
       onGuardar={async () => {
         try {
           if (!(kg > 0)) return setError('Cargá cuánto vendiste.');

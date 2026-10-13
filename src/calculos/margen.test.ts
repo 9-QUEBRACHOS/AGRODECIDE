@@ -128,6 +128,12 @@ describe('calcularCultivo — doble cultivo y % de cosecha', () => {
     const r = calcularCultivo({ ...base, alquiler: { ...alquiler, modalidad: 'porcentaje_cosecha', valor: 30 } });
     // 30% de 350.000 kg × (103.300 / 350.000) USD/kg = 30.990 USD
     expect(r.alquilerUsd).toBeCloseTo(30990, 6);
+    // Rinde de indiferencia: costo sin alquiler por ha / (precio × 70%)
+    expect(r.rindeIndiferenciaKgHa).toBeCloseTo((10900 / 100) / ((103300 / 350000) * 0.7), 6);
+  });
+  it('el costo de oportunidad depende de la tenencia actual del lote', () => {
+    const r = calcularCultivo({ ...base, lote: { ...lote, tenencia: 'propio' } });
+    expect(r.alquilerEsReferencia).toBe(true);
   });
   it('avisa si se vendió más de lo cosechado', () => {
     const r = calcularCultivo({ ...base, cosechas: [{ ...base.cosechas[0], kg: 100000 }] });
@@ -145,5 +151,9 @@ describe('resumir', () => {
     expect(incompleto.margenNetoUsd).toBeNull();
     expect(incompleto.cultivosSinPrecio).toBe(1);
     expect(incompleto.costoTotalUsd).toBe(93800);
+    // doble cultivo en 100 ha físicas: el margen por ha se calcula sobre 100, no 200
+    const doble = resumir([a, a], 100);
+    expect(doble.hectareasSembradas).toBe(200);
+    expect(doble.margenNetoPorHaUsd).toBeCloseTo(1128, 6);
   });
 });

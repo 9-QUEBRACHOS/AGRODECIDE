@@ -20,8 +20,19 @@ export async function borrarCultivo(cultivoId: string) {
     await db.cosechas.where('cultivoEnLoteId').equals(cultivoId).delete();
     await db.ventas.where('cultivoEnLoteId').equals(cultivoId).delete();
     await db.movimientosStock.where('cultivoEnLoteId').equals(cultivoId).delete();
-    await db.reservas.where('origenCultivoEnLoteId').equals(cultivoId).delete();
+    const reservas = await db.reservas.where('origenCultivoEnLoteId').equals(cultivoId).primaryKeys();
+    await db.suministros.where('reservaId').anyOf(reservas).delete();
+    await db.reservas.bulkDelete(reservas);
+    const cultivo = await db.cultivos.get(cultivoId);
     await db.cultivos.delete(cultivoId);
+    // Los cultivos que quedan en el lote vuelven a absorber el 100% del alquiler, en la misma proporción.
+    if (cultivo) {
+      const quedan = await db.cultivos.where('loteId').equals(cultivo.loteId).filter((c) => c.campaniaId === cultivo.campaniaId).toArray();
+      const suma = quedan.reduce((s, c) => s + (c.porcentajeAlquiler ?? 0), 0);
+      for (const c of quedan) {
+        await db.cultivos.update(c.id, { porcentajeAlquiler: suma > 0 ? (c.porcentajeAlquiler / suma) * 100 : 100 / quedan.length });
+      }
+    }
   });
 }
 
@@ -128,7 +139,7 @@ export function reasignarIds(archivo: ArchivoEspacio, generarId: () => string = 
 
 export function validarArchivo(contenido: unknown): ArchivoEspacio {
   const a = contenido as ArchivoEspacio;
-  if (!a || a.formato !== FORMATO_EXPORTACION || !a.espacio || !a.datos) {
+  if (!a || a.formato !== FORMATO_EXPORTACION || !a.espacio || !a.datos || typeof a.version !== 'number') {
     throw new Error('El archivo no es un respaldo de AgroDecide.');
   }
   if (a.version > VERSION_EXPORTACION) {

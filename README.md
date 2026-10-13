@@ -29,7 +29,11 @@ npm run dev      # abre la app en http://localhost:5173
 
 ## Publicarla gratis
 
-La carpeta `dist/` es una página estática. Opciones gratuitas:
+**GitHub Pages (recomendado):** subí este proyecto a un repositorio de GitHub y en
+*Settings → Pages → Source* elegí **GitHub Actions**. Cada vez que subas un cambio a `main`,
+GitHub corre los tests, arma la página y la publica en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
+
+Otras opciones gratuitas con la carpeta `dist/`:
 
 - **Netlify Drop**: entrá a https://app.netlify.com/drop y arrastrá la carpeta `dist`.
 - **GitHub Pages / Netlify / Vercel** conectados al repositorio: comando de build `npm run build`, carpeta `dist`.
